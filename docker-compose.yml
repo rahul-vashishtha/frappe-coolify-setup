@@ -1,6 +1,8 @@
 services:
   configurator:
-    image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    build: .
+    pull_policy: build
     deploy:
       restart_policy:
         condition: none
@@ -9,10 +11,7 @@ services:
       - "-c"
     command:
       - >
-        if [ ! -d apps/hrms ]; then bench get-app hrms --skip-assets; fi;
-        if [ ! -d apps/crm ]; then bench get-app crm --skip-assets; fi;
-        if [ ! -d apps/telephony ]; then bench get-app telephony --skip-assets; fi;
-        if [ ! -d apps/helpdesk ]; then bench get-app helpdesk --skip-assets; fi;
+        set -e;
         ls -1 apps > sites/apps.txt;
         bench set-config -g db_host $$DB_HOST;
         bench set-config -gp db_port $$DB_PORT;
@@ -20,27 +19,28 @@ services:
         bench set-config -g redis_queue "redis://$$REDIS_QUEUE";
         bench set-config -g redis_socketio "redis://$$REDIS_QUEUE";
         bench set-config -gp socketio_port $$SOCKETIO_PORT;
-        bench build --apps hrms,crm,telephony,helpdesk;
+        bench set-config -g default_site $$SITE_NAME;
+        bench set-config -g chromium_path /usr/bin/chromium-headless-shell;
     environment:
+      SITE_NAME: "${SITE_NAME}"
       DB_HOST: db
       DB_PORT: "3306"
       REDIS_CACHE: "redis-cache:6379"
       REDIS_QUEUE: "redis-queue:6379"
       SOCKETIO_PORT: "9000"
     volumes:
-      - "apps:/home/frappe/frappe-bench/apps"
-      - "sites:/home/frappe/frappe-bench/sites"
-      - "logs:/home/frappe/frappe-bench/logs"
+      - "sites-v3:/home/frappe/frappe-bench/sites"
+      - "logs-v3:/home/frappe/frappe-bench/logs"
 
   create-site:
-    image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    pull_policy: never
     deploy:
       restart_policy:
         condition: none
     volumes:
-      - "apps:/home/frappe/frappe-bench/apps"
-      - "sites:/home/frappe/frappe-bench/sites"
-      - "logs:/home/frappe/frappe-bench/logs"
+      - "sites-v3:/home/frappe/frappe-bench/sites"
+      - "logs-v3:/home/frappe/frappe-bench/logs"
     environment:
       SITE_NAME: "${SITE_NAME}"
       ADMIN_PASSWORD: "${SERVICE_PASSWORD_ADMIN}"
@@ -50,13 +50,14 @@ services:
       - "-c"
     command:
       - >
-        wait-for-it -t 120 db:3306; 
-        wait-for-it -t 120 redis-cache:6379; 
-        export start=`date +%s`; 
-        until [[ -n `grep -hs ^ sites/common_site_config.json | jq -r ".db_host // empty"` ]]; do
+        set -e;
+        wait-for-it -t 120 db:3306;
+        wait-for-it -t 120 redis-cache:6379;
+        wait-for-it -t 120 redis-queue:6379;
+        until grep -q '"db_host"' sites/common_site_config.json 2>/dev/null; do
           echo "Waiting for configurator...";
           sleep 5;
-        done; 
+        done;
         if [ ! -d "sites/$${SITE_NAME}" ]; then
           bench new-site "$${SITE_NAME}" \
             --mariadb-user-host-login-scope='%' \
@@ -64,31 +65,37 @@ services:
             --db-root-username=root \
             --db-root-password="$${DB_ROOT_PASSWORD}" \
             --install-app erpnext \
-            --install-app hrms \
-            --install-app crm \
-            --install-app telephony \
-            --install-app helpdesk \
             --set-default;
-        fi
+          bench --site "$${SITE_NAME}" install-app hrms;
+          bench --site "$${SITE_NAME}" install-app crm;
+          bench --site "$${SITE_NAME}" install-app telephony;
+          bench --site "$${SITE_NAME}" install-app helpdesk;
+        fi;
+        bench --site "$${SITE_NAME}" migrate;
     depends_on:
+      configurator:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
 
   backend:
-    image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    pull_policy: never
     deploy:
       restart_policy:
         condition: on-failure
     volumes:
-      - "apps:/home/frappe/frappe-bench/apps"
-      - "sites:/home/frappe/frappe-bench/sites"
-      - "logs:/home/frappe/frappe-bench/logs"
+      - "sites-v3:/home/frappe/frappe-bench/sites"
+      - "logs-v3:/home/frappe/frappe-bench/logs"
     depends_on:
+      create-site:
+        condition: service_completed_successfully
       configurator:
         condition: service_completed_successfully
 
   frontend:
-    image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    pull_policy: never
     deploy:
       restart_policy:
         condition: on-failure
@@ -101,9 +108,8 @@ services:
       UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
       UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
     volumes:
-      - "apps:/home/frappe/frappe-bench/apps"
-      - "sites:/home/frappe/frappe-bench/sites"
-      - "logs:/home/frappe/frappe-bench/logs"
+      - "sites-v3:/home/frappe/frappe-bench/sites"
+      - "logs-v3:/home/frappe/frappe-bench/logs"
     labels:
       - traefik.enable=true
       - 'traefik.http.routers.frappe-router.rule=HostRegexp(`^.+\.igris\.studio$`) || HostRegexp(`^.+\.shopishvara\.com$`)'
@@ -118,36 +124,71 @@ services:
       - websocket
 
   websocket:
-    image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    pull_policy: never
     command:
       - node
       - /home/frappe/frappe-bench/apps/frappe/socketio.js
     volumes:
-      - "apps:/home/frappe/frappe-bench/apps"
-      - "sites:/home/frappe/frappe-bench/sites"
+      - "sites-v3:/home/frappe/frappe-bench/sites"
+      - "logs-v3:/home/frappe/frappe-bench/logs"
     environment:
       FRAPPE_REDIS_CACHE: "redis://redis-cache:6379"
       FRAPPE_REDIS_QUEUE: "redis://redis-queue:6379"
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+      configurator:
+        condition: service_completed_successfully
+
+  queue-short:
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    pull_policy: never
+    command:
+      - bench
+      - worker
+      - "--queue"
+      - "short,default"
+    volumes:
+      - "sites-v3:/home/frappe/frappe-bench/sites"
+      - "logs-v3:/home/frappe/frappe-bench/logs"
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+      configurator:
+        condition: service_completed_successfully
 
   queue-long:
-    image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    pull_policy: never
     command:
       - bench
       - worker
       - "--queue"
       - "long,default,short"
     volumes:
-      - "apps:/home/frappe/frappe-bench/apps"
-      - "sites:/home/frappe/frappe-bench/sites"
+      - "sites-v3:/home/frappe/frappe-bench/sites"
+      - "logs-v3:/home/frappe/frappe-bench/logs"
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+      configurator:
+        condition: service_completed_successfully
 
   scheduler:
-    image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    pull_policy: never
     command:
       - bench
       - schedule
     volumes:
-      - "apps:/home/frappe/frappe-bench/apps"
-      - "sites:/home/frappe/frappe-bench/sites"
+      - "sites-v3:/home/frappe/frappe-bench/sites"
+      - "logs-v3:/home/frappe/frappe-bench/logs"
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+      configurator:
+        condition: service_completed_successfully
 
   db:
     image: "mariadb:11.8"
@@ -159,7 +200,7 @@ services:
       MYSQL_ROOT_PASSWORD: "${SERVICE_PASSWORD_DB}"
       MARIADB_ROOT_PASSWORD: "${SERVICE_PASSWORD_DB}"
     volumes:
-      - "db-data:/var/lib/mysql"
+      - "db-data-v3:/var/lib/mysql"
     healthcheck:
       test:
         - CMD
@@ -180,8 +221,7 @@ services:
       - "redis-queue-data:/data"
 
 volumes:
-  apps: null
-  db-data: null
+  db-data-v3: null
   redis-queue-data: null
-  sites: null
-  logs: null
+  sites-v3: null
+  logs-v3: null
