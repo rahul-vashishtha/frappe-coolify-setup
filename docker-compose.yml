@@ -1,8 +1,6 @@
 services:
   configurator:
     image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
-    build: .
-    pull_policy: build
     deploy:
       restart_policy:
         condition: none
@@ -36,7 +34,6 @@ services:
 
   create-site:
     image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
-    pull_policy: never
     deploy:
       restart_policy:
         condition: none
@@ -79,7 +76,6 @@ services:
 
   backend:
     image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
-    pull_policy: never
     deploy:
       restart_policy:
         condition: on-failure
@@ -93,7 +89,6 @@ services:
 
   frontend:
     image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
-    pull_policy: never
     deploy:
       restart_policy:
         condition: on-failure
@@ -124,7 +119,6 @@ services:
 
   websocket:
     image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
-    pull_policy: never
     command:
       - node
       - /home/frappe/frappe-bench/apps/frappe/socketio.js
@@ -137,7 +131,6 @@ services:
 
   queue-long:
     image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
-    pull_policy: never
     command:
       - bench
       - worker
@@ -149,7 +142,6 @@ services:
 
   scheduler:
     image: "${FRAPPE_IMAGE:-frappe/erpnext:v16.15.0}"
-    pull_policy: never
     command:
       - bench
       - schedule
