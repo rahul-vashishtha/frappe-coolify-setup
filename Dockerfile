@@ -4,4 +4,4 @@ USER root
 RUN apt-get update && apt-get install -y curl gcc g++ make git && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs && npm install -g yarn && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 USER frappe
-RUN bench get-app --resolve-deps hrms --skip-assets && bench get-app --resolve-deps crm --skip-assets && bench get-app --resolve-deps helpdesk --skip-assets && bench build
+RUN bench get-app --resolve-deps hrms && bench get-app --resolve-deps crm && bench get-app --resolve-deps helpdesk && bench build
