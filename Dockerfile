@@ -1,9 +1,12 @@
 FROM frappe/erpnext:v16.15.0
 
-# Switch to the frappe user to run commands safely
 USER frappe
 
-# Download the apps and resolve their dependencies
-RUN bench get-app hrms && \
-    bench get-app crm && \
-    bench get-app helpdesk
+# 1. Use --resolve-deps to fix missing Python packages
+# 2. Use --no-build to skip the heavy Vite/Vue compiling during the fetch phase
+RUN bench get-app --resolve-deps hrms --no-build && \
+    bench get-app --resolve-deps crm --no-build && \
+    bench get-app --resolve-deps helpdesk --no-build
+
+# 3. Compile all the frontends together in one efficient sweep at the end
+RUN bench build
