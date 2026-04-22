@@ -1,0 +1,166 @@
+services:
+  configurator:
+    build: .
+    deploy:
+      restart_policy:
+        condition: none
+    entrypoint:
+      - bash
+      - '-c'
+    command:
+      - "ls -1 apps > sites/apps.txt; bench set-config -g db_host $$DB_HOST; bench set-config -gp db_port $$DB_PORT; bench set-config -g redis_cache \"redis://$$REDIS_CACHE\"; bench set-config -g redis_queue \"redis://$$REDIS_QUEUE\"; bench set-config -g redis_socketio \"redis://$$REDIS_QUEUE\"; bench set-config -gp socketio_port $$SOCKETIO_PORT;\n"
+    environment:
+      DB_HOST: db
+      DB_PORT: '3306'
+      REDIS_CACHE: 'redis-cache:6379'
+      REDIS_QUEUE: 'redis-queue:6379'
+      SOCKETIO_PORT: '9000'
+    volumes:
+      - 'sites:/home/frappe/frappe-bench/sites'
+      - 'logs:/home/frappe/frappe-bench/logs'
+
+  create-site:
+    build: .
+    deploy:
+      restart_policy:
+        condition: none
+    volumes:
+      - 'sites:/home/frappe/frappe-bench/sites'
+      - 'logs:/home/frappe/frappe-bench/logs'
+    environment:
+      SITE_NAME: '${SITE_NAME}'
+      ADMIN_PASSWORD: '${SERVICE_PASSWORD_ADMIN}'
+      DB_ROOT_PASSWORD: '${SERVICE_PASSWORD_DB}'
+    entrypoint:
+      - bash
+      - '-c'
+    command:
+      - >
+        wait-for-it -t 120 db:3306; 
+        wait-for-it -t 120 redis-cache:6379; 
+        export start=`date +%s`; 
+        until [[ -n `grep -hs ^ sites/common_site_config.json | jq -r ".db_host // empty"` ]]; do
+          echo "Waiting for configurator...";
+          sleep 5;
+        done; 
+        if [ ! -d "sites/$${SITE_NAME}" ]; then
+          bench new-site "$${SITE_NAME}" \
+            --mariadb-user-host-login-scope='%' \
+            --admin-password="$${ADMIN_PASSWORD}" \
+            --db-root-username=root \
+            --db-root-password="$${DB_ROOT_PASSWORD}" \
+            --install-app erpnext \
+            --install-app hrms \
+            --install-app crm \
+            --install-app helpdesk \
+            --set-default;
+        fi
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    build: .
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - 'sites:/home/frappe/frappe-bench/sites'
+      - 'logs:/home/frappe/frappe-bench/logs'
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+
+  frontend:
+    build: .
+    deploy:
+      restart_policy:
+        condition: on-failure
+    command:
+      - nginx-entrypoint.sh
+    environment:
+      BACKEND: 'backend:8000'
+      SOCKETIO: 'websocket:9000'
+      FRAPPE_SITE_NAME_HEADER: '${SITE_NAME}'
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+    volumes:
+      - 'sites:/home/frappe/frappe-bench/sites'
+      - 'logs:/home/frappe/frappe-bench/logs'
+    labels:
+      - traefik.enable=true
+      - 'traefik.http.routers.frappe-router.rule=HostRegexp(`^.+\.igris\.studio$`) || HostRegexp(`^.+\.shopishvara\.com$`)'
+      - traefik.http.routers.frappe-router.entryPoints=https
+      - traefik.http.routers.frappe-router.tls=true
+      - traefik.http.routers.frappe-router.tls.certresolver=letsencrypt
+      - traefik.http.services.frontend.loadbalancer.server.port=8080
+    ports:
+      - '0.0.0.0:8081:8080'
+    depends_on:
+      - backend
+      - websocket
+
+  websocket:
+    build: .
+    command:
+      - node
+      - /home/frappe/frappe-bench/apps/frappe/socketio.js
+    volumes:
+      - 'sites:/home/frappe/frappe-bench/sites'
+    environment:
+      FRAPPE_REDIS_CACHE: 'redis://redis-cache:6379'
+      FRAPPE_REDIS_QUEUE: 'redis://redis-queue:6379'
+
+  queue-long:
+    build: .
+    command:
+      - bench
+      - worker
+      - '--queue'
+      - 'long,default,short'
+    volumes:
+      - 'sites:/home/frappe/frappe-bench/sites'
+
+  scheduler:
+    build: .
+    command:
+      - bench
+      - schedule
+    volumes:
+      - 'sites:/home/frappe/frappe-bench/sites'
+
+  db:
+    image: 'mariadb:11.8'
+    command:
+      - '--character-set-server=utf8mb4'
+      - '--collation-server=utf8mb4_unicode_ci'
+      - '--skip-character-set-client-handshake'
+    environment:
+      MYSQL_ROOT_PASSWORD: '${SERVICE_PASSWORD_DB}'
+      MARIADB_ROOT_PASSWORD: '${SERVICE_PASSWORD_DB}'
+    volumes:
+      - 'db-data:/var/lib/mysql'
+    healthcheck:
+      test:
+        - CMD
+        - healthcheck.sh
+        - '--connect'
+        - '--innodb_initialized'
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis-cache:
+    image: 'redis:6.2-alpine'
+
+  redis-queue:
+    image: 'redis:6.2-alpine'
+    volumes:
+      - 'redis-queue-data:/data'
+
+volumes:
+  db-data: null
+  redis-queue-data: null
+  sites: null
+  logs: null
