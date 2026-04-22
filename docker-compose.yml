@@ -9,10 +9,10 @@ services:
       - "-c"
     command:
       - >
-        if [ ! -d apps/hrms ]; then bench get-app hrms https://github.com/frappe/hrms --branch main --skip-assets; fi;
-        if [ ! -d apps/crm ]; then bench get-app crm https://github.com/frappe/crm --branch main --skip-assets; fi;
-        if [ ! -d apps/telephony ]; then bench get-app telephony https://github.com/frappe/telephony --branch main --skip-assets; fi;
-        if [ ! -d apps/helpdesk ]; then bench get-app helpdesk https://github.com/frappe/helpdesk --branch main --skip-assets; fi;
+        if [ ! -d apps/hrms ]; then bench get-app hrms --skip-assets; fi;
+        if [ ! -d apps/crm ]; then bench get-app crm --skip-assets; fi;
+        if [ ! -d apps/telephony ]; then bench get-app telephony --skip-assets; fi;
+        if [ ! -d apps/helpdesk ]; then bench get-app helpdesk --skip-assets; fi;
         ls -1 apps > sites/apps.txt;
         bench set-config -g db_host $$DB_HOST;
         bench set-config -gp db_port $$DB_PORT;
