@@ -1,6 +1,8 @@
 services:
   configurator:
+    image: '${FRAPPE_IMAGE:-frappe-custom:v16.15.0}'
     build: .
+    pull_policy: build
     deploy:
       restart_policy:
         condition: none
@@ -20,7 +22,8 @@ services:
       - 'logs:/home/frappe/frappe-bench/logs'
 
   create-site:
-    build: .
+    image: '${FRAPPE_IMAGE:-frappe-custom:v16.15.0}'
+    pull_policy: never
     deploy:
       restart_policy:
         condition: none
@@ -60,7 +63,8 @@ services:
         condition: service_healthy
 
   backend:
-    build: .
+    image: '${FRAPPE_IMAGE:-frappe-custom:v16.15.0}'
+    pull_policy: never
     deploy:
       restart_policy:
         condition: on-failure
@@ -72,7 +76,8 @@ services:
         condition: service_completed_successfully
 
   frontend:
-    build: .
+    image: '${FRAPPE_IMAGE:-frappe-custom:v16.15.0}'
+    pull_policy: never
     deploy:
       restart_policy:
         condition: on-failure
@@ -101,7 +106,8 @@ services:
       - websocket
 
   websocket:
-    build: .
+    image: '${FRAPPE_IMAGE:-frappe-custom:v16.15.0}'
+    pull_policy: never
     command:
       - node
       - /home/frappe/frappe-bench/apps/frappe/socketio.js
@@ -112,7 +118,8 @@ services:
       FRAPPE_REDIS_QUEUE: 'redis://redis-queue:6379'
 
   queue-long:
-    build: .
+    image: '${FRAPPE_IMAGE:-frappe-custom:v16.15.0}'
+    pull_policy: never
     command:
       - bench
       - worker
@@ -122,7 +129,8 @@ services:
       - 'sites:/home/frappe/frappe-bench/sites'
 
   scheduler:
-    build: .
+    image: '${FRAPPE_IMAGE:-frappe-custom:v16.15.0}'
+    pull_policy: never
     command:
       - bench
       - schedule
