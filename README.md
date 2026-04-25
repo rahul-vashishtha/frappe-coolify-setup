@@ -103,8 +103,9 @@ If you need a completely clean reinstall, remove those volumes and redeploy.
 
 `create-site` is idempotent:
 
-- if the site directory does not exist, it creates the site and installs the apps
-- if the site already exists, it skips creation and runs `bench migrate`
+- if the site directory does not exist, it creates the site
+- on every deploy, it checks the site and installs any missing apps from the image before running `bench migrate`
+- if you add a new baked-in app later, redeploying will install it on the existing site automatically
 
 ## Notes
 

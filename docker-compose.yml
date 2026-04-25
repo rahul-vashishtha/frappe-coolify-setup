@@ -66,12 +66,13 @@ services:
             --db-root-password="$${DB_ROOT_PASSWORD}" \
             --install-app erpnext \
             --set-default;
-          bench --site "$${SITE_NAME}" install-app hrms;
-          bench --site "$${SITE_NAME}" install-app crm;
-          bench --site "$${SITE_NAME}" install-app telephony;
-          bench --site "$${SITE_NAME}" install-app helpdesk;
-          bench --site "$${SITE_NAME}" install-app india_compliance;
         fi;
+        for app in erpnext hrms crm telephony helpdesk india_compliance; do
+          if ! bench --site "$${SITE_NAME}" list-apps | grep -qx "$$app"; then
+            echo "Installing missing app: $$app";
+            bench --site "$${SITE_NAME}" install-app "$$app";
+          fi;
+        done;
         bench --site "$${SITE_NAME}" migrate;
     depends_on:
       configurator:
