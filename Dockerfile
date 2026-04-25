@@ -11,7 +11,7 @@ RUN bench get-app https://github.com/frappe/hrms --branch version-16 --skip-asse
 RUN bench get-app https://github.com/frappe/crm --branch main --skip-assets
 RUN bench get-app https://github.com/frappe/telephony --branch develop --skip-assets
 RUN bench get-app https://github.com/frappe/helpdesk --branch main --skip-assets
-RUN bench get-app https://github.com/resilient-tech/india-compliance.git --branch version-16 --skip-assets
+RUN bench get-app https://github.com/resilient-tech/india-compliance.git --branch version-16
 
 RUN ls -1 apps > sites/apps.txt \
     && bench build --apps hrms,crm,telephony,helpdesk,india_compliance
