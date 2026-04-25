@@ -7,6 +7,7 @@ Docker Compose setup for deploying a custom Frappe/ERPNext stack on Coolify with
 - `crm`
 - `telephony`
 - `helpdesk`
+- `india_compliance`
 
 This repository builds the custom image locally on the Coolify server. It does not require publishing an image to Docker Hub or GHCR.
 
@@ -18,6 +19,7 @@ This repository builds the custom image locally on the Coolify server. It does n
   - `crm` from `main`
   - `telephony` from `develop`
   - `helpdesk` from `main`
+  - `india_compliance` from `version-16`
 - Database: `mariadb:11.8`
 - Redis:
   - `redis-cache`
