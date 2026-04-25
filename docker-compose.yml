@@ -70,6 +70,7 @@ services:
           bench --site "$${SITE_NAME}" install-app crm;
           bench --site "$${SITE_NAME}" install-app telephony;
           bench --site "$${SITE_NAME}" install-app helpdesk;
+          bench --site "$${SITE_NAME}" install-app india_compliance;
         fi;
         bench --site "$${SITE_NAME}" migrate;
     depends_on:
