@@ -14,6 +14,8 @@ RUN mkdir -p sites \
     && printf '{\n  "socketio_port": 9000\n}\n' > sites/common_site_config.json \
     && printf 'frappe\nerpnext\n' > sites/apps.txt
 
+RUN pip install --no-cache-dir legacy-cgi==2.6.4
+
 RUN bench get-app https://github.com/frappe/hrms --branch ${HRMS_REF} --skip-assets
 RUN bench get-app https://github.com/frappe/crm --branch ${CRM_REF} --skip-assets
 RUN bench get-app https://github.com/frappe/telephony --branch ${TELEPHONY_REF} --skip-assets
