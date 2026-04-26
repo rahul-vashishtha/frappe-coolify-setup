@@ -29,7 +29,7 @@ This repository builds the custom image locally on the Coolify server. It does n
 
 App refs are intentionally pinned where upstream repos publish releases but still keep active `main` or `develop` branches. That avoids Coolify rebuilds breaking when upstream branches move.
 
-The image also installs `legacy-cgi` because `ecommerce_integrations` still imports Python's removed `cgi` module during installation on Python 3.13+.
+The image installs `legacy-cgi` into the Bench virtualenv because `ecommerce_integrations` still imports Python's removed `cgi` module during installation on Python 3.13+.
 
 ## How It Works
 
