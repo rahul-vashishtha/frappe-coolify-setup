@@ -50,7 +50,7 @@ services:
       - "-c"
     command:
       - >
-        set -e;
+        set -euo pipefail;
         wait-for-it -t 120 db:3306;
         wait-for-it -t 120 redis-cache:6379;
         wait-for-it -t 120 redis-queue:6379;
@@ -67,8 +67,10 @@ services:
             --install-app erpnext \
             --set-default;
         fi;
-        for app in erpnext hrms crm telephony helpdesk india_compliance ecommerce_integrations; do
-          if ! bench --site "$${SITE_NAME}" list-apps | grep -qx "$$app"; then
+        echo "Installed apps before reconciliation:";
+        bench --site "$${SITE_NAME}" list-apps --format text;
+        for app in hrms crm telephony helpdesk india_compliance ecommerce_integrations; do
+          if ! bench --site "$${SITE_NAME}" list-apps --format text | awk '{print $$1}' | grep -qx "$$app"; then
             echo "Installing missing app: $$app";
             bench --site "$${SITE_NAME}" install-app "$$app";
           fi;
