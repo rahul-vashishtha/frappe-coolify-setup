@@ -8,26 +8,30 @@ Docker Compose setup for deploying a custom Frappe/ERPNext stack on Coolify with
 - `telephony`
 - `helpdesk`
 - `india_compliance`
+- `ecommerce_integrations`
 
 This repository builds the custom image locally on the Coolify server. It does not require publishing an image to Docker Hub or GHCR.
 
 ## Stack
 
-- Base image: `frappe/erpnext:v16.15.0`
+- Base image: `frappe/erpnext:v16.15.1`
 - Custom apps:
   - `hrms` from `version-16`
-  - `crm` from `main`
+  - `crm` pinned to `v1.69.1`
   - `telephony` from `develop`
-  - `helpdesk` from `main`
+  - `helpdesk` pinned to `v1.22.2`
   - `india_compliance` from `version-16`
+  - `ecommerce_integrations` from `main`
 - Database: `mariadb:11.8`
 - Redis:
   - `redis-cache`
   - `redis-queue`
 
+App refs are intentionally pinned where upstream repos publish releases but still keep active `main` or `develop` branches. That avoids Coolify rebuilds breaking when upstream branches move.
+
 ## How It Works
 
-`Dockerfile` builds a custom image on top of `frappe/erpnext:v16.15.0`, installs the extra apps, and runs `bench build`.
+`Dockerfile` builds a custom image on top of `frappe/erpnext:v16.15.1`, installs the extra apps, and runs `bench build`.
 
 `docker-compose.yml` then:
 
@@ -52,7 +56,7 @@ Set these in Coolify for the stack:
 Optional:
 
 - `FRAPPE_IMAGE`
-  Default: `frappe-custom:v16.15.0`
+  Default: `frappe-custom:v16.15.1`
 
 ## Coolify Deployment
 

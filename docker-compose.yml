@@ -1,6 +1,6 @@
 services:
   configurator:
-    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.1}"
     build: .
     pull_policy: build
     deploy:
@@ -33,7 +33,7 @@ services:
       - "logs-v3:/home/frappe/frappe-bench/logs"
 
   create-site:
-    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.1}"
     pull_policy: never
     deploy:
       restart_policy:
@@ -81,7 +81,7 @@ services:
         condition: service_healthy
 
   backend:
-    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.1}"
     pull_policy: never
     deploy:
       restart_policy:
@@ -96,7 +96,7 @@ services:
         condition: service_completed_successfully
 
   frontend:
-    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.1}"
     pull_policy: never
     deploy:
       restart_policy:
@@ -126,7 +126,7 @@ services:
       - websocket
 
   websocket:
-    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.1}"
     pull_policy: never
     command:
       - node
@@ -144,7 +144,7 @@ services:
         condition: service_completed_successfully
 
   queue-short:
-    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.1}"
     pull_policy: never
     command:
       - bench
@@ -161,7 +161,7 @@ services:
         condition: service_completed_successfully
 
   queue-long:
-    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.1}"
     pull_policy: never
     command:
       - bench
@@ -178,7 +178,7 @@ services:
         condition: service_completed_successfully
 
   scheduler:
-    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.0}"
+    image: "${FRAPPE_IMAGE:-frappe-custom:v16.15.1}"
     pull_policy: never
     command:
       - bench
