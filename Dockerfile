@@ -8,7 +8,7 @@ ARG CRM_REF=v1.69.1
 ARG TELEPHONY_REF=develop
 ARG HELPDESK_REF=v1.22.2
 ARG INDIA_COMPLIANCE_REF=version-16
-ARG ECOMMERCE_INTEGRATIONS_REF=main
+ARG ECOMMERCE_INTEGRATIONS_REF=version-16
 
 RUN mkdir -p sites \
     && printf '{\n  "socketio_port": 9000\n}\n' > sites/common_site_config.json \
