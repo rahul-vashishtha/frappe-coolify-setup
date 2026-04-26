@@ -67,7 +67,7 @@ services:
             --install-app erpnext \
             --set-default;
         fi;
-        for app in erpnext hrms crm telephony helpdesk india_compliance; do
+        for app in erpnext hrms crm telephony helpdesk india_compliance ecommerce_integrations; do
           if ! bench --site "$${SITE_NAME}" list-apps | grep -qx "$$app"; then
             echo "Installing missing app: $$app";
             bench --site "$${SITE_NAME}" install-app "$$app";
